@@ -52,7 +52,6 @@ public class UserRepository : IUserRepository
         _context.Users.Remove(user!);
         return Response.Deleted;
     }
-    
 
     public UserDTO? Find(int userId)
     {
