@@ -9,15 +9,14 @@ public class TagRepositoryTests : IDisposable
     {
         var connection = new SqliteConnection("Filename=:memory:");
         connection.Open();
+
         var builder = new DbContextOptionsBuilder<KanbanContext>();
         builder.UseSqlite(connection);
+
         var context = new KanbanContext(builder.Options);
         context.Database.EnsureCreated();
-
-        var tag = new Tag("Teddybear"){Id = 1};
-        var tag2 = new Tag("Balloon"){Id = 2};
-        context.Add(tag);
-        context.Add(tag2);
+        context.AddRange(new Tag("Teddybear"){Id = 1}, 
+                         new Tag("Balloon"){Id = 2});
         context.SaveChanges();
 
         _context = context;
@@ -25,82 +24,106 @@ public class TagRepositoryTests : IDisposable
     }
 
     [Fact]
-    public void Create_returns_name_and_created_response() 
+    public void Create_returns_response_created_and_tag_id_given_tag() 
     {
         //Arrange
         var tag = new TagCreateDTO("Monster");
 
-        //act
+        //Act
         var actual = _repository.Create(tag);
 
-        //assert
+        //Assert
         actual.Should().Be((Response.Created, 3));
     }
 
     [Fact]
-    public void Create_returns_conflict_response_given_same_name() 
+    public void Create_returns_response_conflict_and_tag_id_given_used_name() 
     {
         //Arrange
         var tag = new TagCreateDTO("Teddybear");
 
-        //act
+        //Act
         var actual = _repository.Create(tag);
 
-        //assert
+        //Assert
         actual.Should().Be((Response.Conflict, 0));
     }
 
     [Fact]
-    public void Delete_returns_deleted_response_given_tagId() 
+    public void Delete_returns_response_deleted_given_tag_id() 
     {
-        var actual = _repository.Delete(1);
+        // Arrange
+        var tagid = 1;
 
+        // Act
+        var actual = _repository.Delete(tagid);
+
+        // Assert
         actual.Should().Be(Response.Deleted);
     }
 
     [Fact]
-    public void Read_returns_TagDTO_given_tagId() 
+    public void Find_returns_tag_given_tag_id()
     {
-        var actual = _repository.Read();
-
+        // Arrange
         var expected = new TagDTO(1, "Teddybear");
 
-        actual.First().Should().Be(expected);
+        // Act
+        var actual = _repository.Find(1);
+
+        // Assert
+        actual.Should().Be(expected);
     }
 
     [Fact]
     public void Read_returns_all_tags() 
     {
+        // Arrange
+        var expected = new[] { new TagDTO(1, "Teddybear"), new TagDTO(2, "Balloon") };
+
+        // Act
         var actual = _repository.Read();
-        actual.Should().BeEquivalentTo(new[] {
-            new TagDTO(1, "Teddybear"), 
-            new TagDTO(2, "Balloon")
-        });
+
+        // Assert
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [Fact]
-    public void Update_returns_response_given_tag_update_dto() 
+    public void Update_returns_response_updated_given_updated_tag() 
     {
+        // Arrange
         var newTag = new TagUpdateDTO(1, "Candyfloss");
+
+        // Act
         var actual = _repository.Update(newTag);
 
+        // Assert
         actual.Should().Be(Response.Updated);
     }
 
     [Fact]
-    public void Delete_notfound_null_given_MaxValue_tagid() 
+    public void Delete_returns_response_notfound_given_maxvalue_id() 
     {
+        // Arrange
+
+
+        // Act
         var actual = _repository.Delete(int.MaxValue);
 
+        // Assert
         actual.Should().Be(Response.NotFound);
     }
 
     [Fact]
-    public void Update_returns_notfound_given_maxvalue_tagID() 
+    public void Update_returns_response_notfound_given_maxvalue_id() 
     {
+        // Arrange
         var newTag = new TagUpdateDTO(int.MaxValue, "Teddybear");
+
+        // Act
         var actual = _repository.Update(newTag);
 
+        // Assert
         actual.Should().Be(Response.NotFound);
     }
 

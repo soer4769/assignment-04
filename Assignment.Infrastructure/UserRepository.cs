@@ -11,43 +11,23 @@ public class UserRepository : IUserRepository
     
     public (Response Response, int UserId) Create(UserCreateDTO user)
     {
-        Response response;
         var entity = new User(user.Name,user.Email);
-        var userExists = _context.Users.FirstOrDefault(u => u.Email == user.Email) != null;
+        var userExists = _context.Users.FirstOrDefault(u => u.Email == user.Email);
 
-        if(userExists) 
-        {
-            return (Response.Conflict, 0);
-        }
+        if(userExists != null) return (Response.Conflict, 0);
         _context.Users.Add(entity);
         _context.SaveChanges();
 
-        response = Response.Created;
-
-
-        return (response, entity.Id); 
+        return (Response.Created, entity.Id); 
     }
 
     public Response Delete(int userId, bool force = false)
     {
         var user = _context.Users.FirstOrDefault(u => u.Id == userId);
-        if(user == null)
-        {
-            return Response.NotFound;
-        } 
+        if(user == null) return Response.NotFound;
         
-        bool AssignedToTask = false;
-        foreach(var task in user.Items) {
-            if (task.State == State.Active) {
-                AssignedToTask = true;
-                break;
-            }
-        }
-
-        if(AssignedToTask && !force) 
-        {
-            return Response.Conflict;
-        }
+        bool AssignedToTask = user.Items.Any(t => t.State == State.Active);
+        if(AssignedToTask && !force) return Response.Conflict;
         
         _context.Users.Remove(user!);
         return Response.Deleted;
@@ -61,14 +41,8 @@ public class UserRepository : IUserRepository
 
     public IReadOnlyCollection<UserDTO> Read()
     {
-        if (!_context.Users.Any())
-        {
-            return null!;
-        }
-        
-        var users = from u in _context.Users
-                    select new UserDTO(u.Id, u.Name, u.Email);
-
+        if (!_context.Users.Any()) return null!;
+        var users = from u in _context.Users select new UserDTO(u.Id, u.Name, u.Email);
         return users.ToArray();
     }
 
@@ -76,6 +50,7 @@ public class UserRepository : IUserRepository
     {
         var entity = _context.Users.Find(user.Id);
         if(entity == null) return Response.NotFound;
+        
         entity.Name = user.Name;
         entity.Email = user.Email;
         _context.SaveChanges();
